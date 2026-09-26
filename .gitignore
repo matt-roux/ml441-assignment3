@@ -1,0 +1,4 @@
+cache/
+output/*_smoke.*
+__pycache__/
+.ipynb_checkpoints/
