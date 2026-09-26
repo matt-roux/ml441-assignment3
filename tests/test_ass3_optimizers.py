@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 
 
-def _iris_setup(ns, budget):
+def _c1_setup(ns, budget):
     problem = ns["load_problems"]()["C1"]
     split = ns["make_run_split"](problem, 0)
-    shape = ns["Shape"](4, 4, 3)
+    shape = ns["Shape"](2, 4, 2)
     w0 = ns["init_weights"](shape, ns["rng_for"]("C1", "init", 0, 4))
     objective = ns["Objective"](split.X_train, split.y_train, shape, "classification")
     monitor = ns["Monitor"](
@@ -43,7 +43,7 @@ def test_costs_and_monitor(notebook_ns):
     assert np.array_equal(monitor.best_w, np.array([1.0]))
 
 
-def test_sgd_epoch_and_iris(notebook_ns):
+def test_sgd_epoch_and_c1(notebook_ns):
     ns = notebook_ns
     X = np.arange(5.0)[:, None]
     y = X.copy()
@@ -55,13 +55,13 @@ def test_sgd_epoch_and_iris(notebook_ns):
         ns["sgd"](w0, obj, mon, 0.001, batch_size, np.random.default_rng(1))
         assert obj.cu == pytest.approx(3)
         assert len(mon.curve) == 2
-    w0, obj, mon = _iris_setup(ns, 600)
+    w0, obj, mon = _c1_setup(ns, 600)
     initial = obj.evaluate(w0)
     ns["sgd"](w0, obj, mon, 0.1, 16, ns["rng_for"]("C1", "sgd", 0))
     assert mon.best_train_loss <= 0.5 * initial
 
 
-def test_scg_quadratic_costs_and_iris(notebook_ns):
+def test_scg_quadratic_costs_and_c1(notebook_ns):
     ns = notebook_ns
     one_d = ns["FunctionObjective"](lambda x: 0.5 * float(x @ x), lambda x: x.copy(), 1)
     one_d_mon = ns["Monitor"](one_d, one_d.evaluate, 10)
@@ -94,7 +94,7 @@ def test_scg_quadratic_costs_and_iris(notebook_ns):
     first_reached = next(i for i, norm in enumerate(monitor.gradient_norms) if norm < 1e-6)
     assert first_reached <= 60
 
-    w0, obj, mon = _iris_setup(ns, 600)
+    w0, obj, mon = _c1_setup(ns, 600)
     initial = obj.evaluate(w0)
     ns["scg"](w0, obj, mon)
     assert mon.best_train_loss <= 0.5 * initial
@@ -111,7 +111,7 @@ def test_scg_rejected_step_reuses_curvature(notebook_ns):
     assert [cu for cu, _, _ in monitor.curve[:4]] == [0.0, 7.0, 8.0, 9.0]
 
 
-def test_leapfrog_rosenbrock_costs_and_iris(notebook_ns):
+def test_leapfrog_rosenbrock_costs_and_c1(notebook_ns):
     ns = notebook_ns
 
     def rosenbrock(x):
@@ -130,10 +130,10 @@ def test_leapfrog_rosenbrock_costs_and_iris(notebook_ns):
     assert result.iterations + 1 <= 10000
     assert obj.cu == pytest.approx(3 * (result.iterations + 1))
 
-    w0, iris_obj, iris_mon = _iris_setup(ns, 600)
-    initial = iris_obj.evaluate(w0)
-    ns["leapfrog"](w0, iris_obj, iris_mon, 0.5, 1.0)
-    assert iris_mon.best_train_loss <= 0.5 * initial
+    w0, c1_obj, c1_mon = _c1_setup(ns, 600)
+    initial = c1_obj.evaluate(w0)
+    ns["leapfrog"](w0, c1_obj, c1_mon, 0.5, 1.0)
+    assert c1_mon.best_train_loss <= 0.5 * initial
 
 
 def test_leapfrog_midpoint_indexing(notebook_ns):
@@ -167,6 +167,6 @@ def test_sanity_checks_are_recorded_and_pass(notebook_ns):
     assert set(checks["check"]) == {
         "gradient_classification", "gradient_regression", "scg_quadratic",
         "leapfrog_rosenbrock", "sgd_epoch_cost", "scg_iteration_cost",
-        "sgd_iris", "scg_iris", "leapfrog_iris",
+        "sgd_c1", "scg_c1", "leapfrog_c1",
     }
     assert checks["passed"].all()

@@ -4,9 +4,11 @@ import numpy as np
 def test_problem_catalog_and_streams(notebook_ns):
     problems = notebook_ns["load_problems"]()
     assert list(problems) == ["C1", "C2", "C3", "FA1", "FA2", "FA3"]
-    assert [len(p.X) for p in problems.values()] == [150, 569, 1797, 500, 1000, 442]
-    assert [p.X.shape[1] for p in problems.values()] == [4, 30, 64, 1, 10, 10]
-    assert [len(np.unique(p.y)) if p.task == "classification" else 1 for p in problems.values()] == [3, 2, 10, 1, 1, 1]
+    assert [len(p.X) for p in problems.values()] == [500, 208, 1797, 500, 1000, 442]
+    assert [p.X.shape[1] for p in problems.values()] == [2, 60, 64, 1, 10, 10]
+    assert [len(np.unique(p.y)) if p.task == "classification" else 1 for p in problems.values()] == [2, 2, 10, 1, 1, 1]
+    assert np.array_equal(np.bincount(problems["C1"].y), [250, 250])
+    assert np.array_equal(np.bincount(problems["C2"].y), [111, 97])
     rng_for = notebook_ns["rng_for"]
     a = rng_for("C1", "split", 0).normal(size=10)
     assert np.array_equal(a, rng_for("C1", "split", 0).normal(size=10))

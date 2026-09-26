@@ -28,7 +28,7 @@ def test_notebook_structure():
 
 def test_notebook_configuration(notebook_ns):
     assert notebook_ns["BASE_SEED"] == 441
-    assert notebook_ns["CODE_VERSION"] == "ass3-v1"
+    assert notebook_ns["CODE_VERSION"] == "ass3-v2"
 
 
 def test_smoke_notebook_end_to_end(tmp_path, monkeypatch):
@@ -49,7 +49,7 @@ def test_smoke_notebook_end_to_end(tmp_path, monkeypatch):
     figure_names = (
         "fig_hidden_units", "fig_tuning_sgd", "fig_tuning_scg",
         "fig_tuning_leapfrog", "fig_convergence_train", "fig_convergence_val",
-        "fig_test_boxplots", "fig_fa1_fits", "fig_avg_ranks",
+        "fig_test_boxplots", "fig_fa1_fits", "fig_c1_boundary", "fig_avg_ranks",
     )
     expected = {f"ass3_{name}_smoke.csv" for name in csv_names}
     expected |= {f"ass3_{name}_smoke.{extension}"

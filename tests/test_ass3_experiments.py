@@ -20,9 +20,10 @@ def test_cache_key_and_reuse(notebook_ns, tmp_path):
     assert len(ns["cache_key"](spec)) == 40
     assert ns["cache_key"](spec) == ns["cache_key"](shuffled)
     old_key = ns["cache_key"](spec)
-    ns["CODE_VERSION"] = "ass3-v2"
+    original_version = ns["CODE_VERSION"]
+    ns["CODE_VERSION"] = "ass3-test"
     assert ns["cache_key"](spec) != old_key
-    ns["CODE_VERSION"] = "ass3-v1"
+    ns["CODE_VERSION"] = original_version
     first = ns["run_many"]([spec])
     assert len(first) == 1
     ns["run_one"] = lambda _: (_ for _ in ()).throw(AssertionError("cache missed"))
@@ -146,7 +147,7 @@ def test_phase3_pairing_and_censoring(notebook_ns):
     paired = [spec for spec in full if spec.problem == "C1" and spec.seed == 1000]
     assert len(paired) == 3
     assert len({spec.H for spec in paired}) == 1
-    shape = ns["Shape"](4, 2, 3)
+    shape = ns["Shape"](2, 2, 2)
     starts = [ns["init_weights"](shape, ns["rng_for"]("C1", "init", spec.seed, spec.H))
               for spec in paired]
     assert all(np.array_equal(starts[0], start) for start in starts[1:])
@@ -200,7 +201,7 @@ def test_final_metrics_use_best_checkpoint(notebook_ns):
     row = ns["run_one"](_spec(ns, algo="sgd", phase="phase3", seed=1000))
     split = ns["make_run_split"](ns["load_problems"]()["C1"], 1000)
     assert np.isclose(row["test_loss"], ns["loss"](row["best_w"], split.X_test, split.y_test,
-                                                   ns["Shape"](4, 2, 3), "classification"))
+                                                   ns["Shape"](2, 2, 2), "classification"))
     assert np.isfinite(row["test_loss"])
 
 
