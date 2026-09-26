@@ -210,3 +210,47 @@ def test_final_summary_and_curve_alignment(notebook_ns):
     aligned = ns["align_curves"](enriched, "val_loss", np.array([0, 1, 2, 3, 4]))
     sgd = aligned[aligned.algo == "sgd"]
     assert list(sgd["median"]) == [1.0, 1.0, 1.0, 0.55, 0.55]
+
+
+def test_paired_friedman_and_holm(notebook_ns):
+    ns = notebook_ns
+    rows = pd.DataFrame([
+        {"problem": "C1", "seed": seed, "algo": algo,
+         "test_loss": (1.0 if algo in ("sgd", "scg") else 3.0) + seed * 0.001,
+         "cu_to_target": 60.0}
+        for seed in range(30)
+        for algo in ("sgd", "scg", "leapfrog")
+    ])
+    omnibus, posthoc = ns["paired_stats"](rows)
+    loss_rows = omnibus[omnibus.criterion == "test_loss"]
+    speed_rows = omnibus[omnibus.criterion == "cu_to_target"]
+    assert len(loss_rows) == 3
+    assert (loss_rows["friedman_p"] < 0.05).all()
+    assert (speed_rows["friedman_p"] == 1).all()
+    assert len(posthoc) == 3
+    same_pair = posthoc[((posthoc.algo_a == "sgd") & (posthoc.algo_b == "scg"))]
+    assert same_pair.iloc[0]["adjusted_p"] == 1
+    assert posthoc["adjusted_p"].between(0, 1).all()
+    equal = rows.copy()
+    equal["test_loss"] = 1.0
+    equal_omnibus, equal_posthoc = ns["paired_stats"](equal)
+    assert (equal_omnibus["friedman_p"] == 1).all()
+    assert equal_posthoc.empty
+    assert equal_omnibus["note"].notna().all()
+
+
+def test_across_problem_ranks_and_cd(notebook_ns):
+    ns = notebook_ns
+    rows = pd.DataFrame([
+        {"problem": problem, "algo": algo, "test_loss": loss}
+        for problem in ("C1", "C2", "C3", "FA1", "FA2", "FA3")
+        for algo, loss in (("sgd", 1.0), ("scg", 2.0), ("leapfrog", 3.0))
+    ])
+    ranks = ns["across_problem_ranks"](rows)
+    per_problem = ranks[ranks.problem != "Average"]
+    assert (per_problem.groupby("problem")["rank"].sum() == 6).all()
+    average = ranks[ranks.problem == "Average"]
+    assert len(average) == 3
+    assert average["rank"].sum() == 6
+    assert np.isclose(ns["nemenyi_cd"](), 1.3527, atol=0.01)
+    assert (average["friedman_p"] < 0.05).all()
