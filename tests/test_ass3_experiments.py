@@ -83,3 +83,31 @@ def test_phase1_grid_and_one_se_rule(notebook_ns):
     assert selected.iloc[0]["H"] == 1
     assert np.isclose(selected.iloc[0]["threshold"], 0.41)
     assert np.isclose(evidence.loc[evidence["H"] == 2, "se_best_val_loss"].iloc[0], 0.01)
+
+
+def test_phase2_grid_and_selection(notebook_ns):
+    ns = notebook_ns
+    selected_h = pd.DataFrame({"problem": list(ns["load_problems"]()), "H": [2] * 6})
+    full = ns["phase2_specs"](selected_h)
+    assert len(full) == 2160
+    assert {algo: len({spec.params for spec in full if spec.algo == algo})
+            for algo in ("sgd", "scg", "leapfrog")} == {"sgd": 15, "scg": 9, "leapfrog": 12}
+    assert set(ns["TUNING_SEEDS"]).isdisjoint(ns["FINAL_SEEDS"])
+    ns["MODE"] = "smoke"
+    ns["TUNING_SEEDS"] = (0, 1)
+    smoke = ns["phase2_specs"](selected_h)
+    assert len(smoke) == 72
+    assert all(len({spec.params for spec in smoke if spec.algo == algo}) == 2
+               for algo in ("sgd", "scg", "leapfrog"))
+    first = (("B", 1), ("eta", 0.003))
+    second = (("B", 16), ("eta", 0.003))
+    data = pd.DataFrame([
+        {"problem": "C1", "algo": "sgd", "H": 2, "params": params,
+         "best_val_loss": value}
+        for params, losses in ((first, [0.4, 0.6]), (second, [0.5, 0.5]))
+        for value in losses
+    ])
+    evidence, chosen = ns["select_parameters"](data)
+    assert len(evidence) == 2
+    assert chosen.iloc[0]["params"] == first
+    assert chosen.iloc[0]["mean_best_val_loss"] == 0.5
