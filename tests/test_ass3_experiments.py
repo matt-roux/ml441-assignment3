@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 
 def _spec(ns, algo="scg", phase="phase1", seed=0):
@@ -61,6 +62,19 @@ def test_run_many_parallel_workers(notebook_ns, tmp_path):
     assert list(rows["seed"]) == [0, 1]
     assert rows["best_val_loss"].notna().all()
     assert len(list(tmp_path.rglob("*.pkl"))) == 2
+
+
+def test_completed_run_is_cached_before_later_failure(notebook_ns, tmp_path, monkeypatch):
+    ns = notebook_ns
+    ns["BUDGET_CU"] = 21
+    ns["CACHE_DIR"] = tmp_path
+    monkeypatch.setattr(ns["os"], "cpu_count", lambda: 1)
+    good = _spec(ns, seed=0)
+    bad = ns["RunSpec"]("phase1", "C1", "unknown", 2, (), 1, False)
+    with pytest.raises(ValueError, match="unknown algorithm"):
+        ns["run_many"]([good, bad])
+    path = tmp_path / ns["MODE"] / "phase1" / f"{ns['cache_key'](good)}.pkl"
+    assert path.is_file()
 
 
 def test_phase1_grid_and_one_se_rule(notebook_ns):
