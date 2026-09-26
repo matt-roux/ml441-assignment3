@@ -109,3 +109,64 @@ def test_scg_rejected_step_reuses_curvature(notebook_ns):
     monitor = ns["Monitor"](objective, objective.evaluate, 9)
     ns["scg"](np.array([0.0]), objective, monitor)
     assert [cu for cu, _, _ in monitor.curve[:4]] == [0.0, 7.0, 8.0, 9.0]
+
+
+def test_leapfrog_rosenbrock_costs_and_iris(notebook_ns):
+    ns = notebook_ns
+
+    def rosenbrock(x):
+        return float(100 * (x[1] - x[0] ** 2) ** 2 + (1 - x[0]) ** 2)
+
+    def rosenbrock_grad(x):
+        return np.array([
+            -400 * x[0] * (x[1] - x[0] ** 2) - 2 * (1 - x[0]),
+            200 * (x[1] - x[0] ** 2),
+        ])
+
+    obj = ns["FunctionObjective"](rosenbrock, rosenbrock_grad, 1)
+    mon = ns["Monitor"](obj, obj.evaluate, 30000)
+    result = ns["leapfrog"](np.array([-1.2, 1.0]), obj, mon, 0.5, 1.0)
+    assert np.linalg.norm(mon.best_w - np.ones(2)) < 1e-3
+    assert result.iterations + 1 <= 10000
+    assert obj.cu == pytest.approx(3 * (result.iterations + 1))
+
+    w0, iris_obj, iris_mon = _iris_setup(ns, 600)
+    initial = iris_obj.evaluate(w0)
+    ns["leapfrog"](w0, iris_obj, iris_mon, 0.5, 1.0)
+    assert iris_mon.best_train_loss <= 0.5 * initial
+
+
+def test_leapfrog_midpoint_indexing(notebook_ns):
+    ns = notebook_ns
+    obj = ns["FunctionObjective"](lambda x: 0.5 * float(x @ x), lambda x: x.copy(), 1)
+    mon = ns["Monitor"](obj, obj.evaluate, 12)
+    ns["leapfrog"](np.array([1.0]), obj, mon, 1.0, 1.0)
+    positions = [round(float(np.sqrt(2 * train_loss)), 4) for _, train_loss, _ in mon.curve]
+    assert len(positions) == 4
+    assert positions[0] == 1.0
+    assert positions[1] == 0.4995
+    assert positions[2] == 0.5005
+    assert positions[3] == 0.0005
+
+
+def test_leapfrog_halves_after_three_direction_reversals(notebook_ns):
+    ns = notebook_ns
+    gradients = iter([1.0, -10.0, 100.0, -1000.0, 10000.0])
+    objective = ns["FunctionObjective"](
+        lambda x: float(x[0]), lambda x: np.array([next(gradients)]), 1
+    )
+    monitor = ns["Monitor"](objective, objective.evaluate, 15)
+    ns["leapfrog"](np.array([0.0]), objective, monitor, 1.0, 0.1)
+    positions = [round(train_loss, 5) for _, train_loss, _ in monitor.curve]
+    assert positions == [0.0, -0.1, 0.0, -0.1, -0.05]
+
+
+def test_sanity_checks_are_recorded_and_pass(notebook_ns):
+    checks = notebook_ns["run_sanity_checks"]()
+    assert {"check", "measured", "threshold", "passed"}.issubset(checks.columns)
+    assert set(checks["check"]) == {
+        "gradient_classification", "gradient_regression", "scg_quadratic",
+        "leapfrog_rosenbrock", "sgd_epoch_cost", "scg_iteration_cost",
+        "sgd_iris", "scg_iris", "leapfrog_iris",
+    }
+    assert checks["passed"].all()
