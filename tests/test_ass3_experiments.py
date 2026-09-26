@@ -61,3 +61,25 @@ def test_run_many_parallel_workers(notebook_ns, tmp_path):
     assert list(rows["seed"]) == [0, 1]
     assert rows["best_val_loss"].notna().all()
     assert len(list(tmp_path.rglob("*.pkl"))) == 2
+
+
+def test_phase1_grid_and_one_se_rule(notebook_ns):
+    ns = notebook_ns
+    problems = ns["load_problems"]()
+    full = ns["phase1_specs"](problems)
+    assert len(full) == 720
+    assert {spec.seed for spec in full} == set(range(10))
+    assert all(spec.algo == "scg" and dict(spec.params) ==
+               {"sigma": 1e-4, "lambda_0": 1e-6} for spec in full)
+    ns["H_GRID"] = [2, 4]
+    ns["TUNING_SEEDS"] = (0, 1)
+    assert len(ns["phase1_specs"](problems)) == 24
+    data = pd.DataFrame([
+        {"problem": "C1", "H": H, "best_val_loss": value}
+        for H, values in ((1, [0.408, 0.408]), (2, [0.39, 0.41]), (3, [0.42, 0.42]))
+        for value in values
+    ])
+    evidence, selected = ns["select_hidden_units"](data)
+    assert selected.iloc[0]["H"] == 1
+    assert np.isclose(selected.iloc[0]["threshold"], 0.41)
+    assert np.isclose(evidence.loc[evidence["H"] == 2, "se_best_val_loss"].iloc[0], 0.01)
