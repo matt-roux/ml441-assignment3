@@ -5,6 +5,6 @@ scg_quadratic,41.0,60.0,True,first iteration with gradient norm < 1e-6
 leapfrog_rosenbrock,2.0558895887358685e-05,0.001,True,447 gradients
 sgd_epoch_cost,3.0,3.0,True,
 scg_iteration_cost,7.0,7.0,True,
-sgd_iris,0.027551544929344595,0.5,True,
-scg_iris,0.0274708893070096,0.5,True,
-leapfrog_iris,0.05573488675944951,0.5,True,
+sgd_c1,0.12346133827769568,0.5,True,
+scg_c1,0.05544253190198354,0.5,True,
+leapfrog_c1,0.03594562611955993,0.5,True,

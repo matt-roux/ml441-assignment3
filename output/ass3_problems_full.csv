@@ -1,6 +1,6 @@
 problem,description,task,n,inputs,outputs,class_counts,preprocessing
-C1,Iris; 3 classes,classification,150,4,3,"[50, 50, 50]",training-only input z-score; one-hot targets
-C2,Breast Cancer Wisconsin Diagnostic; 2 classes,classification,569,30,2,"[212, 357]",training-only input z-score; one-hot targets
+C1,"Concentric circles, noise=0.1, factor=0.5; 2 classes",classification,500,2,2,"[250, 250]",training-only input z-score; one-hot targets
+C2,Sonar mines vs rocks (OpenML 40); 2 classes,classification,208,60,2,"[111, 97]",training-only input z-score; one-hot targets
 C3,Optical digits 8×8; 10 classes,classification,1797,64,10,"[178, 182, 177, 183, 181, 182, 181, 179, 174, 180]",training-only input z-score; one-hot targets
 FA1,"Noisy smooth 1-D function, sigma=0.1",regression,500,1,1,,training-only input and target z-score
 FA2,"Friedman #1, sigma=1; 5 irrelevant inputs",regression,1000,10,1,,training-only input and target z-score

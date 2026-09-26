@@ -2,7 +2,7 @@ setting,value
 mode,"""full"""
 base_seed,441
 data_seed,441
-code_version,"""ass3-v1"""
+code_version,"""ass3-v2"""
 budget_cu,3000
 hidden_unit_grid,"[1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64]"
 tuning_seeds,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]"
