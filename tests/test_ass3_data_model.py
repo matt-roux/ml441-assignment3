@@ -43,3 +43,43 @@ def test_training_only_scaling(notebook_ns):
     altered = notebook_ns["Problem"](original.id, original.task, altered_X, original.y, original.description)
     second = notebook_ns["make_run_split"](altered, 0)
     assert np.array_equal(first.X_train, second.X_train)
+
+
+def test_network_shapes_and_stability(notebook_ns):
+    ns = notebook_ns
+    shape = ns["Shape"](3, 4, 2)
+    w = ns["init_weights"](shape, np.random.default_rng(13))
+    W1, b1, W2, b2 = ns["unpack"](w, shape)
+    assert len(w) == 3 * 4 + 4 + 4 * 2 + 2
+    assert np.array_equal(ns["pack"](W1, b1, W2, b2), w)
+    assert max(np.abs(W1).max(), np.abs(b1).max()) <= 1 / np.sqrt(3)
+    assert max(np.abs(W2).max(), np.abs(b2).max()) <= 1 / np.sqrt(4)
+    X = np.array([[1.0, -2.0, 0.2], [0.5, 1.0, -0.5]])
+    probabilities = ns["forward"](w, X, shape, "classification")
+    assert np.allclose(probabilities.sum(axis=1), 1)
+    huge = ns["pack"](W1, b1, W2, np.array([1000.0, -1000.0]))
+    y = np.array([[0.0, 1.0], [1.0, 0.0]])
+    assert np.isfinite(ns["loss"](huge, X, y, shape, "classification"))
+
+
+def test_gradients_match_central_difference(notebook_ns):
+    ns = notebook_ns
+    X = np.array([[-1.0, 0.5], [0.2, -0.3], [1.2, 0.7]])
+    for task, y, n_out in (
+        ("classification", np.eye(2)[[0, 1, 0]], 2),
+        ("regression", np.array([[0.2], [-0.7], [1.1]]), 1),
+    ):
+        shape = ns["Shape"](2, 3, n_out)
+        w = ns["init_weights"](shape, np.random.default_rng(8))
+        value, analytic = ns["loss_grad"](w, X, y, shape, task)
+        assert np.isfinite(value)
+        numerical = np.empty_like(w)
+        for i in range(len(w)):
+            offset = np.zeros_like(w)
+            offset[i] = 1e-6
+            numerical[i] = (
+                ns["loss"](w + offset, X, y, shape, task)
+                - ns["loss"](w - offset, X, y, shape, task)
+            ) / (2e-6)
+        relative_error = np.linalg.norm(analytic - numerical) / max(1, np.linalg.norm(analytic), np.linalg.norm(numerical))
+        assert relative_error < 1e-6, (task, relative_error)
