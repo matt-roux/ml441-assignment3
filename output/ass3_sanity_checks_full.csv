@@ -1,0 +1,10 @@
+check,measured,threshold,passed,details
+gradient_classification,1.9740000291690668e-10,1e-06,True,
+gradient_regression,1.8000871667116046e-10,1e-06,True,
+scg_quadratic,41.0,60.0,True,first iteration with gradient norm < 1e-6
+leapfrog_rosenbrock,2.0558895887358685e-05,0.001,True,447 gradients
+sgd_epoch_cost,3.0,3.0,True,
+scg_iteration_cost,7.0,7.0,True,
+sgd_iris,0.027551544929344595,0.5,True,
+scg_iris,0.0274708893070096,0.5,True,
+leapfrog_iris,0.05573488675944951,0.5,True,

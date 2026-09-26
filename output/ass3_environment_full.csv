@@ -1,0 +1,13 @@
+component,version
+Python,3.13.9
+CPU cores,6
+numpy,2.4.3
+scikit-learn,1.8.0
+scipy,1.17.1
+pandas,3.0.1
+matplotlib,3.10.8
+joblib,1.5.3
+threadpoolctl,3.6.0
+nbformat,5.11.1
+nbclient,0.11.0
+pytest,9.0.3
