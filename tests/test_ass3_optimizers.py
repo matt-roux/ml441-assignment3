@@ -59,3 +59,53 @@ def test_sgd_epoch_and_iris(notebook_ns):
     initial = obj.evaluate(w0)
     ns["sgd"](w0, obj, mon, 0.1, 16, ns["rng_for"]("C1", "sgd", 0))
     assert mon.best_train_loss <= 0.5 * initial
+
+
+def test_scg_quadratic_costs_and_iris(notebook_ns):
+    ns = notebook_ns
+    one_d = ns["FunctionObjective"](lambda x: 0.5 * float(x @ x), lambda x: x.copy(), 1)
+    one_d_mon = ns["Monitor"](one_d, one_d.evaluate, 10)
+    result = ns["scg"](np.array([2.0]), one_d, one_d_mon)
+    assert result.iterations == 1
+    assert one_d.cu == 10
+    assert np.linalg.norm(one_d_mon.best_w) < 1e-5
+
+    rng = np.random.default_rng(3)
+    Q, _ = np.linalg.qr(rng.normal(size=(20, 20)))
+    A = Q @ np.diag(np.geomspace(1, 100, 20)) @ Q.T
+    b = rng.normal(size=20)
+    objective = ns["FunctionObjective"](
+        lambda x: 0.5 * float(x @ A @ x) - float(b @ x),
+        lambda x: A @ x - b,
+        1,
+    )
+    class TrackingMonitor(ns["Monitor"]):
+        def __init__(self, *args):
+            super().__init__(*args)
+            self.gradient_norms = []
+
+        def record(self, w):
+            super().record(w)
+            self.gradient_norms.append(float(np.linalg.norm(A @ w - b)))
+
+    monitor = TrackingMonitor(objective, objective.evaluate, 1000)
+    ns["scg"](np.zeros(20), objective, monitor)
+    assert np.linalg.norm(A @ monitor.best_w - b) < 1e-6
+    first_reached = next(i for i, norm in enumerate(monitor.gradient_norms) if norm < 1e-6)
+    assert first_reached <= 60
+
+    w0, obj, mon = _iris_setup(ns, 600)
+    initial = obj.evaluate(w0)
+    ns["scg"](w0, obj, mon)
+    assert mon.best_train_loss <= 0.5 * initial
+
+
+def test_scg_rejected_step_reuses_curvature(notebook_ns):
+    ns = notebook_ns
+    # Deliberately adversarial function/gradient pair isolates the rejection-cost branch.
+    objective = ns["FunctionObjective"](
+        lambda x: float(x[0]), lambda x: np.array([-1.0]), 1
+    )
+    monitor = ns["Monitor"](objective, objective.evaluate, 9)
+    ns["scg"](np.array([0.0]), objective, monitor)
+    assert [cu for cu, _, _ in monitor.curve[:4]] == [0.0, 7.0, 8.0, 9.0]
